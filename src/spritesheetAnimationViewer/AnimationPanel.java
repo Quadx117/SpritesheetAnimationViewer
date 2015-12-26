@@ -1,4 +1,4 @@
-package spriteAnimator;
+package spritesheetAnimationViewer;
 
 import java.awt.Graphics;
 import java.awt.image.BufferedImage;

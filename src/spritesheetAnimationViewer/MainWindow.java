@@ -1,4 +1,4 @@
-package spriteAnimator;
+package spritesheetAnimationViewer;
 
 import java.awt.Color;
 import java.awt.Component;

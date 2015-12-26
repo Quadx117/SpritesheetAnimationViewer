@@ -1,4 +1,4 @@
-package spriteAnimator;
+package spritesheetAnimationViewer;
 
 import javax.swing.UIManager;
 
