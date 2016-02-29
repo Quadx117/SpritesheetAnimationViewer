@@ -4,12 +4,13 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.Font;
-import java.awt.Graphics;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -19,7 +20,6 @@ import java.util.Hashtable;
 import javax.imageio.ImageIO;
 import javax.swing.ButtonGroup;
 import javax.swing.ImageIcon;
-import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -41,36 +41,34 @@ import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileFilter;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.plaf.basic.BasicMenuBarUI;
 
 @SuppressWarnings("serial")
 public class MainWindow extends JFrame implements Runnable
 {
 	/**
+	 * An instance of the {@link MainWindow} class.
+	 */
+	private static MainWindow mainWindow;
+
+	/**
+	 * The title for the window.
+	 */
+	private String title = "Sprite Animator (Alpha 0.8)";
+
+	/**
+	 * whether the application is running or not.
+	 */
+	private boolean running = false;
+
+	/**
 	 * The BufferedImage that will contain the data of the loaded sprite sheet.
 	 */
 	private BufferedImage loadedImage;
 
-	// private Canvas canvas = new Canvas();
+	/**
+	 * The panel used to render the animation.
+	 */
 	private AnimationPanel animationCanvas;
-	public boolean running = false;
-
-	private MainWindow mainWindow;
-
-	private String title = "Sprite Animator (Alpha 0.7)";
-	private int windowWidth = 900;
-	private int windowHeight = 600;
-	// TODO: Need to find a way to get that info in another way
-	private int animationPanelWidth = 300;
-	private int animationPanelHeight = 250;
-
-	private Color bgColor = new Color(80, 80, 80);
-	private Color bgColorTxtBox = new Color(70, 70, 70);
-	private Color outsideBorderColor = new Color(70, 70, 70);
-	private Color insideBorderColor = new Color(94, 94, 94);
-	private Color titleColor = new Color(200, 200, 200);
-	private Color textColor = new Color(160, 160, 160);
-
 	private JPanel contentPane;
 	private JPanel spriteSheetViewerPanel;
 	private JPanel animationPanel;
@@ -86,8 +84,13 @@ public class MainWindow extends JFrame implements Runnable
 	private final JFileChooser fileChooser = new JFileChooser();
 	private final FileFilter filter = new FileNameExtensionFilter("Images (*.jpg, *.png)", "jpg", "jpeg", "png");
 
-	private int time = 0;
-	private int dx1, dy1, dx2, dy2, sx1, sy1, sx2, sy2;
+	private Color bgColor = new Color(80, 80, 80);
+	private Color bgColorTxtBox = new Color(70, 70, 70);
+	private Color outsideBorderColor = new Color(70, 70, 70);
+	private Color insideBorderColor = new Color(94, 94, 94);
+	private Color titleColor = new Color(200, 200, 200);
+	private Color textColor = new Color(160, 160, 160);
+
 	private int animPos = 0;
 	// TODO: Need to find a better way for these default values
 	private int xAxisAnim = 0;
@@ -113,27 +116,18 @@ public class MainWindow extends JFrame implements Runnable
 	public MainWindow()
 	{
 		mainWindow = this;
-		// TODO: find a way to not use this hack
-		// TODO: See if we can get rid of canvas (JPanel ?)
-		// canvas.setBounds(4, 4, 292, 242);
-
-		// canvas.setPreferredSize(new Dimension(animationPanelWidth, animationPanelHeight));
-
-		Dimension size = new Dimension(windowWidth, windowHeight);
-		//getContentPane().setPreferredSize(size);
 
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		setResizable(true);
 		setTitle(title);
-		// getContentPane().add(this);
 
 		contentPane = new JPanel();
-		// contentPane.setPreferredSize(size);
 		contentPane.setBackground(bgColor);
 		contentPane.setForeground(textColor);
 		contentPane.setBorder(new EmptyBorder(0, 0, 0, 0));
 		setContentPane(contentPane);
 		GridBagLayout gbl_contentPane = new GridBagLayout();
+		// Default window size : 900 x 600
 		gbl_contentPane.columnWidths = new int[] { 600, 300 };
 		gbl_contentPane.rowHeights = new int[] { 250, 350 };
 		gbl_contentPane.columnWeights = new double[] { 100.0, 0.0 };
@@ -145,7 +139,6 @@ public class MainWindow extends JFrame implements Runnable
 		initSpriteSheetViewerPanel();
 		initAnimationPanel();
 		initAnimationSettingsPanel();
-		// setJMenuBar(mb);
 
 		repaint();
 		pack();
@@ -155,7 +148,7 @@ public class MainWindow extends JFrame implements Runnable
 
 	private void initMenuBar()
 	{
-		
+
 		JMenuBar menuBar = new JMenuBar();
 
 		JMenu mnFileMenu = new JMenu("File");
@@ -208,6 +201,7 @@ public class MainWindow extends JFrame implements Runnable
 					picLabel.setIcon(new ImageIcon(loadedImage));
 					spriteSheetViewerPanel.revalidate();
 					animationCanvas.image = loadedImage;
+					txtFrameWidth.requestFocus();
 				}
 				else
 				{
@@ -267,7 +261,6 @@ public class MainWindow extends JFrame implements Runnable
 		animationCanvas.setFocusable(false);
 		animationCanvas.setBorder(new EmptyBorder(10, 10, 10, 10));
 		animationPanel.add(animationCanvas);
-		// animationPanel.add(canvas);
 	}
 
 	private void initAnimationSettingsPanel()
@@ -334,6 +327,17 @@ public class MainWindow extends JFrame implements Runnable
 		txtFrameWidth.setForeground(textColor);
 		txtFrameWidth.setText("0");
 		txtFrameWidth.setBounds(180, lblFrameWidth.getY() - 1, txtFieldWidth, txtFieldHeight);
+		txtFrameWidth.addFocusListener(new FocusListener() {
+			@Override
+			public void focusLost(final FocusEvent e)
+			{}
+
+			@Override
+			public void focusGained(final FocusEvent e)
+			{
+				txtFrameWidth.selectAll();
+			}
+		});
 		animationSettingsPanel.add(txtFrameWidth);
 
 		JLabel lblFrameHeight = new JLabel("Frame Height (in pixels)");
@@ -361,6 +365,17 @@ public class MainWindow extends JFrame implements Runnable
 		txtFrameHeight.setForeground(textColor);
 		txtFrameHeight.setText("0");
 		txtFrameHeight.setBounds(txtFrameWidth.getX(), lblFrameHeight.getY() - 1, txtFieldWidth, txtFieldHeight);
+		txtFrameHeight.addFocusListener(new FocusListener() {
+			@Override
+			public void focusLost(final FocusEvent e)
+			{}
+
+			@Override
+			public void focusGained(final FocusEvent e)
+			{
+				txtFrameHeight.selectAll();
+			}
+		});
 		animationSettingsPanel.add(txtFrameHeight);
 
 		JLabel lblXOffset = new JLabel("X Offset (in sprites)");
@@ -388,6 +403,17 @@ public class MainWindow extends JFrame implements Runnable
 		txtXOffset.setForeground(textColor);
 		txtXOffset.setText("0");
 		txtXOffset.setBounds(txtFrameWidth.getX(), lblXOffset.getY() - 1, txtFieldWidth, txtFieldHeight);
+		txtXOffset.addFocusListener(new FocusListener() {
+			@Override
+			public void focusLost(final FocusEvent e)
+			{}
+
+			@Override
+			public void focusGained(final FocusEvent e)
+			{
+				txtXOffset.selectAll();
+			}
+		});
 		animationSettingsPanel.add(txtXOffset);
 
 		JLabel lblYOffset = new JLabel("Y Offset (in sprites)");
@@ -414,6 +440,17 @@ public class MainWindow extends JFrame implements Runnable
 		txtYOffset.setForeground(textColor);
 		txtYOffset.setText("0");
 		txtYOffset.setBounds(txtFrameWidth.getX(), lblYOffset.getY() - 1, txtFieldWidth, txtFieldHeight);
+		txtYOffset.addFocusListener(new FocusListener() {
+			@Override
+			public void focusLost(final FocusEvent e)
+			{}
+
+			@Override
+			public void focusGained(final FocusEvent e)
+			{
+				txtYOffset.selectAll();
+			}
+		});
 		animationSettingsPanel.add(txtYOffset);
 
 		JLabel lblAnimationLength = new JLabel("Animation Length (in sprites)");
@@ -442,6 +479,17 @@ public class MainWindow extends JFrame implements Runnable
 		txtAnimationLength.setText("0");
 		txtAnimationLength
 				.setBounds(txtFrameWidth.getX(), lblAnimationLength.getY() - 1, txtFieldWidth, txtFieldHeight);
+		txtAnimationLength.addFocusListener(new FocusListener() {
+			@Override
+			public void focusLost(final FocusEvent e)
+			{}
+
+			@Override
+			public void focusGained(final FocusEvent e)
+			{
+				txtAnimationLength.selectAll();
+			}
+		});
 		animationSettingsPanel.add(txtAnimationLength);
 
 		JLabel lblAnimationOrientation = new JLabel("Animation Orientation");
@@ -529,7 +577,6 @@ public class MainWindow extends JFrame implements Runnable
 		fpsSlider.setForeground(textColor);
 		fpsSlider.setBackground(bgColor);
 		fpsSlider.setBounds(25, (int) lblFramesPerSecond.getBounds().getMaxY() + yPadding, sliderWidth, sliderHeight);
-		// fpsSlider.addChangeListener(this);
 		animationSettingsPanel.add(fpsSlider);
 
 		// add change listener
@@ -609,7 +656,6 @@ public class MainWindow extends JFrame implements Runnable
 		zoomSlider.setForeground(textColor);
 		zoomSlider.setBackground(bgColor);
 		zoomSlider.setBounds(25, (int) lblZoom.getBounds().getMaxY() + yPadding, sliderWidth, sliderHeight);
-		// zoomSlider.addChangeListener(this);
 		animationSettingsPanel.add(zoomSlider);
 
 		// add change listener
@@ -624,11 +670,11 @@ public class MainWindow extends JFrame implements Runnable
 
 	public synchronized void start()
 	{
-		running = true;
 		Thread thread = new Thread(this, "main");
 		thread.start();
 	}
 
+	@Override
 	public void run()
 	{
 		running = true;
@@ -641,6 +687,8 @@ public class MainWindow extends JFrame implements Runnable
 		int frames = 0;
 		int updates = 0;
 		requestFocus();
+		txtFrameWidth.setCaretPosition(0);
+		txtFrameWidth.moveCaretPosition(0);
 
 		animLastTime = System.currentTimeMillis();
 		while (running)
@@ -669,28 +717,24 @@ public class MainWindow extends JFrame implements Runnable
 
 	public void update()
 	{
-		if (time > 7500)
-			time = 0;
-		time++;
 		animCurrentTime = System.currentTimeMillis();
 		animDelta += (animCurrentTime - animLastTime) / 1000.0;
 		animLastTime = animCurrentTime;
 		updateValues();
 		updateSprite();
-
 	}
 
 	public void updateValues()
 	{
-		frameWidth = parseFrameWidth();
-		frameHeight = parseFrameHeight();
+		frameWidth = parseTxtBoxIntegerValue(txtFrameWidth);
+		frameHeight = parseTxtBoxIntegerValue(txtFrameHeight);
 		animationCanvas.setSize(frameWidth * zoom, frameHeight * zoom);
 		animationCanvas.setPreferredSize(animationCanvas.getSize());
 		animationCanvas.revalidate();
 		animationCanvas.repaint();
-		xSpriteOffset = parseXSpriteOffset();
-		ySpriteOffset = parseYSpriteOffset();
-		animLength = parseAnimLength();
+		xSpriteOffset = parseTxtBoxIntegerValue(txtXOffset) * frameWidth;
+		ySpriteOffset = parseTxtBoxIntegerValue(txtYOffset) * frameHeight;
+		animLength = parseTxtBoxIntegerValue(txtAnimationLength);
 	}
 
 	public void updateSprite()
@@ -705,10 +749,6 @@ public class MainWindow extends JFrame implements Runnable
 		}
 		if (animPos > animLength - 1)
 			animPos = 0;
-		// animationCanvas.dx1 = animationPanelWidth / 2 - (frameWidth * zoom / 2);
-		// animationCanvas.dy1 = animationPanelHeight / 2 - (frameHeight * zoom / 2);
-		// animationCanvas.dx2 = animationPanelWidth / 2 + (frameWidth * zoom / 2);
-		// animationCanvas.dy2 = animationPanelHeight / 2 + (frameHeight * zoom / 2);
 		/*
 		 * If xAxisAnim = 1, our sprites for animation are on the same line, so we animate
 		 * on the xAxis. Otherwise we animate on the yAxis
@@ -719,81 +759,35 @@ public class MainWindow extends JFrame implements Runnable
 		animationCanvas.sy2 = frameHeight + (animPos * yAxisAnim * frameHeight) + ySpriteOffset;
 	}
 
-	private int parseFrameWidth()
+	/**
+	 * Parses the value of the specified {@link JTextField} and return it as an {@link Integer} If
+	 * the value is not convertible to an {@code int}, this method returns the value 0.
+	 * 
+	 * @param txtField
+	 *        The {@code JTextField} from which we want to parse the value.
+	 * @return The {@code int} value if it is convertible to an {@code int}, 0 otherwise.
+	 */
+	private int parseTxtBoxIntegerValue(JTextField txtField)
 	{
-		int spSize;
+		int value;
 		try
 		{
-			spSize = Integer.parseInt(txtFrameWidth.getText());
+			value = Integer.parseInt(txtField.getText());
 		}
 		catch (NumberFormatException e)
 		{
-			spSize = 0;
+			value = 0;
 		}
-		return spSize;
+		return value;
 	}
 
-	private int parseFrameHeight()
+	/**
+	 * Render the animation of the sprite.
+	 */
+	private void render()
 	{
-		int spSize;
-		try
-		{
-			spSize = Integer.parseInt(txtFrameHeight.getText());
-		}
-		catch (NumberFormatException e)
-		{
-			spSize = 0;
-		}
-		return spSize;
-	}
-
-	private int parseAnimLength()
-	{
-		int animLength;
-		try
-		{
-			animLength = Integer.parseInt(txtAnimationLength.getText());
-		}
-		catch (NumberFormatException e)
-		{
-			animLength = 0;
-		}
-		return animLength;
-	}
-
-	private int parseXSpriteOffset()
-	{
-		int xSpriteOffset;
-		try
-		{
-			xSpriteOffset = Integer.parseInt(txtXOffset.getText());
-			xSpriteOffset *= parseFrameWidth();
-		}
-		catch (NumberFormatException e)
-		{
-			xSpriteOffset = 0;
-		}
-		return xSpriteOffset;
-	}
-
-	private int parseYSpriteOffset()
-	{
-		int ySpriteOffset;
-		try
-		{
-			ySpriteOffset = Integer.parseInt(txtYOffset.getText());
-			ySpriteOffset *= parseFrameHeight();
-		}
-		catch (NumberFormatException e)
-		{
-			ySpriteOffset = 0;
-		}
-		return ySpriteOffset;
-	}
-
-	public void render()
-	{
-		animationCanvas.paintComponent(animationCanvas.getGraphics());
+		// animationCanvas.paintComponent(animationCanvas.getGraphics());
+		animationCanvas.repaint();
 	}
 
 }
